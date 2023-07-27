@@ -1,56 +1,75 @@
-import { Card, Form, Alert, Button } from "react-bootstrap";
-import { useState } from 'react';
-import { registerUser } from '@/lib/authenticate';
-import { useRouter } from 'next/router';
+import jwt_decode from 'jwt-decode';
 
-export default function Register(props){
+// => Designed explicitly to store the token
+function setToken(token) {
+    localStorage.setItem('access_token', token);
+}
 
-  const [user, setUser] = useState("");
-  const [password, setPassword] = useState("");
-  const [password2, setPassword2] = useState("");
-  const [warning, setWarning] = useState('');
-  const router = useRouter();
-
-
-  async function handleSubmit(e) {
-    e.preventDefault();
+// => Designed explicitly to retrieve the token from "localStorage" using getItem()
+export function getToken() {
     try {
-      await registerUser(user,password,password2);
-      router.push('/login');
+      return localStorage.getItem('access_token');
     } catch (err) {
-      setWarning(err.message);
+      return null;
+    }
+}
+
+// => Removes the token from localStorage using removeItem()
+export function removeToken() {
+    localStorage.removeItem('access_token');
+}
+
+// => Used to obtain the payload from the JWT
+export function readToken() {
+    try {
+      const token = getToken();
+      return token ? jwt_decode(token) : null;
+    } catch (err) {
+      return null;
     }
   }
 
-   return (
-        <>
-            <Card bg="light">
-                <Card.Body>
-                <h2>Register</h2>
-                <p>Register for an account:</p>
-                { warning && ( <><br /><Alert variant="danger">{warning}</Alert></> )}
-                </Card.Body>
-            </Card>
-            <br />
-            <Form onSubmit={handleSubmit}>
-                <Form.Group>
-                    <Form.Label>User:</Form.Label>
-                    <Form.Control type="text" value={user} id="userName" name="userName" onChange={e => setUser(e.target.value)} />
-                </Form.Group>
-                <br />
-                <Form.Group>
-                    <Form.Label>Password:</Form.Label>
-                    <Form.Control type="password" value={password} id="password" name="password" onChange={e => setPassword(e.target.value)} />
-                </Form.Group>
-                <br />
-                <Form.Group>
-                    <Form.Label>Confirm Password:</Form.Label>
-                    <Form.Control type="password" value={password2} id="password2" name="password2" onChange={e => setPassword2(e.target.value)} />
-                </Form.Group>
-                <br />
-                <Button variant="dark" className="pull-right" type="submit">Register</Button><br /><br />
-                <p className="form-text">Already have an account? <Link className="form-link" href="/login">Log in</Link></p>
-            </Form>
-        </>
-    );
+// => Serves to determine whether or not the current user is "authenticated"
+export function isAuthenticated() {
+    const token = readToken();
+    return token ? true : false;
+}
+
+// => Attempts to obtain a JWT from the API using an async fetch request
+export async function authenticateUser(user, password) {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/login`, {
+      method: 'POST',
+      body: JSON.stringify({ userName: user, password: password }),
+      headers: {
+        'content-type': 'application/json',
+      },
+    });
+  
+    const data = await res.json();
+  
+    if (res.status === 200) {
+      setToken(data.token);
+      return true;
+    } else {
+      throw new Error(data.message);
+    }
+}
+
+// => Attempts to register the user
+export async function registerUser(user, password, password2) {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/register`, {
+      method: 'POST',
+      body: JSON.stringify({ userName: user, password: password, password2: password2 }),
+      headers: {
+        'content-type': 'application/json',
+      },
+    });
+  
+    const data = await res.json();
+  
+    if (res.status === 200) {
+      return true;
+    } else {
+      throw new Error(data.message);
+    }
 }
