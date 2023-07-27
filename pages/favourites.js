@@ -11,7 +11,6 @@ import ArtworkCard from '@/components/ArtworkCard';
 export default function Favourites() {
     // Get a reference to the favourites list
     const [ favourites, setFavourites ] = useAtom(favouritesAtom);
-    if(!favourites) return null;
 
     // Add the artworkList to the state
     let [ artworkList, setArtworkList ] = useState([]);
@@ -21,14 +20,17 @@ export default function Favourites() {
             setArtworkList(favourites);
     }, []);
 
+    // List doesn't temporarily show the "Nothing Here" message
+    if(!favourites) return null;
+
     return (
         <>
-            <Container>
+            <Container className="justify-content-center align-items-center">
             {artworkList.length > 0 ? (
                 <>
                     <Row className="gy-4">
                         {artworkList.map((currentObjectID) => (
-                            <Col lg={3} key={currentObjectID}>
+                            <Col lg={3} key={currentObjectID} className="d-flex justify-content-center">
                                 <ArtworkCard objectID={currentObjectID} />
                             </Col>
                         ))}
@@ -38,7 +40,6 @@ export default function Favourites() {
                 <Card>
                     <Card.Body>
                     <h4>Nothing Here</h4>
-                    <p>Try searching for something else.</p>
                     </Card.Body>
                 </Card>
                 )}

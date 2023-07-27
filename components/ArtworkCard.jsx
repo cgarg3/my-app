@@ -6,11 +6,14 @@ import Link from 'next/link';
 import Error from 'next/error';
 
 export default function ArtworkCard({ objectID }) {
+    // Make a call to the museum API using the objectID passed as props to this component
     const { data, error } = useSWR(`https://collectionapi.metmuseum.org/public/collection/v1/objects/${objectID}`);
 
+    // Throw an error if the API request fails
     if (error) {
         return <Error statusCode={404} />;
     } else {
+        // Validate the data
         if (!data || data.length === 0) {
             return null;
         }
@@ -35,3 +38,5 @@ export default function ArtworkCard({ objectID }) {
         }
     }
 }
+
+

@@ -3,8 +3,9 @@ import useSWR from 'swr';
 import Card from 'react-bootstrap/Card';
 import { useAtom } from 'jotai';
 import { favouritesAtom } from '@/store';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from 'react-bootstrap';
+import Error from 'next/error';  
 import { addToFavourites, removeFromFavourites } from '@/lib/userData';
 
 export default function ArtworkCardDetail({ objectID }) {
@@ -17,17 +18,19 @@ export default function ArtworkCardDetail({ objectID }) {
     // Using conditional fetching: Use null or pass a function as key to conditionally fetch data. If the function throws or returns a falsy value, SWR will not start the request.
     const { data, error } = useSWR(objectID ? `https://collectionapi.metmuseum.org/public/collection/v1/objects/${objectID}` : null);
 
+    // pdate showAdded 
     useEffect(()=>{
-        setShowAdded(favouritesList?.includes(objectID))
-       }, [favouritesList])
+        setShowAdded(favourites?.includes(objectID));
+    }, [favourites]);
+    
 
     // To be invoked when the button is clicked
-    async function favouritesClicked () {
+    async function favouritesClicked() {
         // If the "showAdded" value in the state is true, then we must remove this piece of artwork from the favourites list.  
         if (showAdded) {
-            setFavourites(await removeFromFavourites(objectID))
+            setFavourites(await removeFromFavourites(objectID));
         } else {
-            setFavourites(await addToFavourites(objectID))
+            setFavourites(await addToFavourites(objectID));
         }
     }
 
