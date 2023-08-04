@@ -1,42 +1,38 @@
-import React from "react";
+import { useRouter } from 'next/router';
 import { useState, useEffect } from 'react';
-import { useAtom } from "jotai";
-import { favouritesAtom, searchHistoryAtom } from "@/store";
-import { useRouter } from "next/router";
-import { getFavourites, getHistory } from "@/lib/userData";
-import { isAuthenticated } from "@/lib/authenticate";
+import { isAuthenticated } from '@/lib/authenticate';
+import { getHistory, getFavourites } from '@/lib/userData';
+import { favouritesAtom, searchHistoryAtom } from '@/store';
+import { useAtom } from 'jotai';
 
-const PUBLIC_PATHS = ['/register', '/login', '/', '/_error'];
+const PUBLIC_PATHS = ['/login', '/', '/_error', '/register'];
 
 export default function RouteGuard(props) {
-    // References to atoms
-    const [ favouritesList, setFavouritesList ] = useAtom(favouritesAtom);
-    const [ searchHistory, setSearchHistory ] = useAtom(searchHistoryAtom);
-    // Authorization State
     const [authorized, setAuthorized] = useState(false);
-    // Router instance
+    const [searchHistory, setSearchHistory] = useAtom(searchHistoryAtom);
+    const [favouritesList, setFavouritesList] = useAtom(favouritesAtom);
     const router = useRouter();
 
-    // Function to update the atoms in our store before redirecting the user
     async function updateAtoms() {
         setFavouritesList(await getFavourites()); 
-        setSearchHistory(await getHistory());
-    }    
+        setSearchHistory(await getHistory()); 
+    }
 
-    // Run auth check on initial load
     useEffect(() => {
         updateAtoms();
+        // on initial load - run auth check
         authCheck(router.pathname);
         // on route change complete - run auth check
         router.events.on('routeChangeComplete', authCheck);
+  
         // unsubscribe from events in useEffect return function
         return () => {
-        router.events.off('routeChangeComplete', authCheck);
+            router.events.off('routeChangeComplete', authCheck);
         };
     }, []);
-
-    // Redirect to login page if accessing a private page and not logged in
+  
     function authCheck(url) {
+        // redirect to login page if accessing a private page and not logged in
         const path = url.split('?')[0];
         if (!isAuthenticated() && !PUBLIC_PATHS.includes(path)) {
           setAuthorized(false);
@@ -45,6 +41,6 @@ export default function RouteGuard(props) {
           setAuthorized(true);
         }
       }
-
-    return <>{props.children}</>
-}
+  
+      return <>{authorized && props.children}</>
+  }
