@@ -1,103 +1,80 @@
-
-import React, { useState } from 'react';
-import { Card, Button } from 'react-bootstrap';
+import React from 'react';
 import useSWR from 'swr';
-// import { Error } from '../components/Error'; // Import the Error component
+import Card from 'react-bootstrap/Card';
 import { useAtom } from 'jotai';
-import { favouritesAtom } from '../store';
-import { addToFavourites, removeFromFavourites } from '../lib/userData'; // Import functions to handle favorites
+import { favouritesAtom } from '@/store';
+import { useState, useEffect } from 'react';
+import { Button } from 'react-bootstrap';
+import { addToFavourites, removeFromFavourites } from '@/lib/userData';
+import Error from 'next/error';
 
+export default function ArtworkCardDetail({objectID}) {
+    // alert(objectID)
+    const [favouritesList, setFavouritesList] = useAtom(favouritesAtom);
 
-const useFavouritesAtom = () => {
-  return useAtom(favouritesAtom);
-};
+    // const showAdded = favouritesList.includes(objectID);
+    // alert(favouritesList.length)
+    const [ showAddedState, setShowAddedState ] = useState(false)
+    
+    useEffect(()=>{
+        setShowAddedState(favouritesList?.includes(objectID))
+    }, [favouritesList, objectID])
+    
+    // function check()
+    // {
+    //     alert(favouritesList)
+    // }
 
-const ArtworkCardDetail = ({ objectID }) => {
-  const fetcher = async (url) => {
-    const res = await fetch(url);
-    if (!res.ok) {
-      const error = new Error('An error occurred while fetching the data.');
-      error.info = await res.json();
-      error.status = res.status;
-      throw error;
+    async function favouritesClicked()
+    {
+        if(showAddedState)
+        {
+            setFavouritesList(await removeFromFavourites(objectID))
+            // setFavouritesList(current => current.filter(fav => fav != objectID));
+            setShowAddedState(false)
+        }
+        else
+        {
+            setFavouritesList(await addToFavourites(objectID))
+            setShowAddedState(true)
+        }
+        // setShowAddedState(!showAddedState);
     }
-    return res.json();
-  };
 
-  // Get the favouritesList and setFavouritesList from the favouritesAtom
-  const [favouritesList, setFavouritesList] = useFavouritesAtom();
+    const { data, error } = useSWR(objectID ? `https://collectionapi.metmuseum.org/public/collection/v1/objects/${objectID}` : null)
 
-  const { data, error } = useSWR(
-    objectID ? `https://collectionapi.metmuseum.org/public/collection/v1/objects/${objectID}` : null,
-    fetcher
-  );
-
-  if (error) {
-    return null;
-  }
-
-  if (!data) {
-    return null;
-  }
-
-  const { primaryImage, title, objectDate, classification, medium, artistDisplayName, creditLine, dimensions, artistWikidata_URL } = data;
-
-  const cardImgSrc = primaryImage ? primaryImage : 'https://via.placeholder.com/375x375.png?text=[+Not+Available+]';
-
-  // Get a reference to the "showAdded" value in the state
-  const [showAdded, setShowAdded] = useState(favouritesList.includes(objectID));
-
-  // Function to handle the favourites button click
-  const favouritesClicked = async () => {
-    if (showAdded) {
-      // Remove the objectID from the "favouritesList"
-      setFavouritesList((current) => current.filter((fav) => fav !== objectID));
-      // Remove the objectID from the user's favorites on the server
-      await removeFromFavourites(objectID);
-    } else {
-      // Add the objectID to the "favouritesList"
-      setFavouritesList((current) => [...current, objectID]);
-      // Add the objectID to the user's favorites on the server
-      await addToFavourites(objectID);
+    if(error)
+    {
+        return <Error statusCode={404} />;
     }
-    // Toggle the "showAdded" state
-    setShowAdded(!showAdded);
-  };
+    else if(data)
+    {
+        return (
+            <Card>
+            {data?.primaryImage && <Card.Img variant="top" src={data?.primaryImage || 'https://via.placeholder.com/375x375.png?text=[+Not+Available+]'} />}
+            <Card.Body>
+                <Card.Title>{data?.title || 'N/A'}</Card.Title>
+                <Card.Text>
+                    <strong>Date: </strong>{data?.objectDate || 'N/A'} <br />
+                    <strong>Classification: </strong>{data?.classification || 'N/A'} <br />
+                    <strong>Medium: </strong>{data?.medium || 'N/A'} <br /><br />
 
-  return (
-    <Card>
-      {primaryImage && <Card.Img variant="top" src={cardImgSrc} />}
-      <Card.Body>
-        <Card.Title>{title || 'N/A'}</Card.Title>
-        <div>
-          Object Date: {objectDate || 'N/A'}
-          <br />
-          Classification: {classification || 'N/A'}
-          <br />
-          Medium: {medium || 'N/A'}
-          <br />
-          <br />
-          Artist: {artistDisplayName || 'N/A'}
-          {artistDisplayName && (
-            <a href={artistWikidata_URL} target="_blank" rel="noreferrer">
-              wiki
-            </a>
-          )}
-          <br />
-          Credit Line: {creditLine || 'N/A'}
-          <br />
-          Dimensions: {dimensions || 'N/A'}
-        </div>
-
-        {/* Favourites Button */}
-        <Button variant={showAdded ? 'primary' : 'outline-primary'} onClick={favouritesClicked}>
-          {showAdded ? '+ Favourite (added)' : '+ Favourite'}
-        </Button>
-      </Card.Body>
-    </Card>
-  );
-};
-
-export default ArtworkCardDetail;
-
-
+                    <strong>Artist: </strong>{data?.artistDisplayName ? data?.artistDisplayName : "N/A"}
+                    {data?.artistDisplayName && <span> ( <a href={data?.artistWikidata_URL} target="_blank" rel="noreferrer" style={{color: "red"}}>wiki</a> )</span>} <br />
+                    
+                    <strong>Credit Line: </strong>{data?.creditLine || 'N/A'} <br />
+                    <strong>Dimensions: </strong>{data?.dimensions || 'N/A'}
+                </Card.Text>
+                {/* <Link href={`/artwork/${objectID}`} passHref><Button variant="outline-primary"></Button></Link> */}
+                <Button variant={showAddedState ? "primary" : "outline-primary"} onClick={favouritesClicked}>+ Favourite{showAddedState ? ' (added)' : ''}</Button>
+                {/* <Button onClick={check}>Check</Button> */}
+            </Card.Body>
+            </Card>
+        )
+    }
+    else
+    {
+        return null
+    }
+    
+}

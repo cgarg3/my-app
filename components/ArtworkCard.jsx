@@ -1,56 +1,41 @@
 import React from 'react';
-import { Card, Button } from 'react-bootstrap';
-import Link from 'next/link';
 import useSWR from 'swr';
+import Button from 'react-bootstrap/Button';
+import Card from 'react-bootstrap/Card';
+import Link from 'next/link';
 import Error from 'next/error';
 
-const ArtworkCard = ({ objectID }) => {
-  const fetcher = async (url) => {
-    const res = await fetch(url);
-    if (!res.ok) {
-      const error = new Error('An error occurred while fetching the data.');
-      error.info = await res.json();
-      error.status = res.status;
-      throw error;
+export default function ArtworkCard({objectID}) {
+    const { data, error, isLoading } = useSWR(`https://collectionapi.metmuseum.org/public/collection/v1/objects/${objectID}`)
+
+    if(error)
+    {
+        return (<Error statusCode={404} />)
     }
-    return res.json();
-  };
-
-  const { data, error } = useSWR(
-    `https://collectionapi.metmuseum.org/public/collection/v1/objects/${objectID}`,
-    fetcher
-  );
-
-  if (error) {
-    return <Error statusCode={404} />;
-  }
-
-  if (!data) {
-    return null;
-  }
-
-  const { primaryImageSmall, title, objectDate, classification, medium } = data;
-
-  const cardImgSrc = primaryImageSmall || 'https://via.placeholder.com/375x375.png?text=[+Not+Available+]';
-
-  return (
-    <Card>
-      <Card.Img variant="top" src={cardImgSrc} />
-      <Card.Body>
-        <Card.Title>{title || 'N/A'}</Card.Title>
-        <Card.Text>
-          Object Date: {objectDate || 'N/A'}
-          <br />
-          Classification: {classification || 'N/A'}
-          <br />
-          Medium: {medium || 'N/A'}
-        </Card.Text>
-        <Link href={`/artwork/${objectID}`} passHref>
-          View Details (ID: {objectID})
-        </Link>
-      </Card.Body>
-    </Card>
-  );
-};
-
-export default ArtworkCard;
+    else if(isLoading)
+    {
+        return <div>Loading object details...</div>
+    }
+    else if(data)
+    {
+        return (
+            <Card style={{ width: '18rem' }}>
+            <Card.Img variant="top" src={data?.primaryImageSmall || 'https://via.placeholder.com/375x375.png?text=[+Not+Available+]'} />
+            <Card.Body>
+                <Card.Title>{data?.title || 'N/A'}</Card.Title>
+                <Card.Text>
+                    <strong>Date: </strong>{data?.objectDate || 'N/A'} <br />
+                    <strong>Classification: </strong>{data?.classification || 'N/A'} <br />
+                    <strong>Medium: </strong>{data?.medium || 'N/A'} <br />
+                </Card.Text>
+                <Link href={`/artwork/${data?.objectID}`} passHref><Button variant="outline-dark"><strong>ID: </strong>{data?.objectID}</Button></Link>
+            </Card.Body>
+            </Card>
+        )
+    }
+    else
+    {
+        return null
+    }
+    
+}
