@@ -1,18 +1,19 @@
 import React from 'react';
 import { useRouter } from 'next/router';
-import Row from 'react-bootstrap/Row';
-import Col from 'react-bootstrap/Col';
+import { Col, Row } from 'react-bootstrap';
 import ArtworkCardDetail from '@/components/ArtworkCardDetail';
 
-export default function ArtworkById() {
+const ArtworkById = () => {
   const router = useRouter();
   const { objectID } = router.query;
 
   return (
     <Row>
-      <Col className="d-flex justify-content-center">
+      <Col>
         <ArtworkCardDetail objectID={objectID} />
       </Col>
     </Row>
   );
-}
+};
+
+export default ArtworkById;

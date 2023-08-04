@@ -1,42 +1,56 @@
 import React from 'react';
-import useSWR from 'swr';
-import Button from 'react-bootstrap/Button';
-import Card from 'react-bootstrap/Card';
+import { Card, Button } from 'react-bootstrap';
 import Link from 'next/link';
+import useSWR from 'swr';
 import Error from 'next/error';
 
-export default function ArtworkCard({ objectID }) {
-    // Make a call to the museum API using the objectID passed as props to this component
-    const { data, error } = useSWR(`https://collectionapi.metmuseum.org/public/collection/v1/objects/${objectID}`);
-
-    // Throw an error if the API request fails
-    if (error) {
-        return <Error statusCode={404} />;
-    } else {
-        // Validate the data
-        if (!data || data.length === 0) {
-            return null;
-        }
-        else if (data.message === "Not a valid object") {
-            return null;
-        }
-        else {
-            return (
-                <Card className='hero-card' style={{ width: '18rem' }}>
-                    {data.primaryImageSmall ? <Card.Img className='card-image' variant="top" src={data.primaryImageSmall} /> : <Card.Img className='card-image' variant="top" src="https://via.placeholder.com/375x375.png?text=[+Not+Available+]" /> }
-                    <Card.Body>
-                        {data.title ? <Card.Title className='card-title'>{data.title}</Card.Title> : <Card.Title className='card-title'>N/A</Card.Title> }
-                        <Card.Text>
-                            {data.objectDate ? <p className='card-date'>{data.objectDate}</p> : <p>N/A</p> }
-                            {data.classification ? <p>{data.classification}</p> : <p>N/A</p> }
-                            {data.medium ? <p>{data.medium}</p> : <p>N/A</p> }
-                        </Card.Text>
-                        <Link passHref legacyBehavior href={`/artwork/${objectID}`}><Button variant="dark">{ objectID }</Button></Link>
-                    </Card.Body>
-                </Card>
-            );
-        }
+const ArtworkCard = ({ objectID }) => {
+  const fetcher = async (url) => {
+    const res = await fetch(url);
+    if (!res.ok) {
+      const error = new Error('An error occurred while fetching the data.');
+      error.info = await res.json();
+      error.status = res.status;
+      throw error;
     }
-}
+    return res.json();
+  };
 
+  const { data, error } = useSWR(
+    `https://collectionapi.metmuseum.org/public/collection/v1/objects/${objectID}`,
+    fetcher
+  );
 
+  if (error) {
+    return <Error statusCode={404} />;
+  }
+
+  if (!data) {
+    return null;
+  }
+
+  const { primaryImageSmall, title, objectDate, classification, medium } = data;
+
+  const cardImgSrc = primaryImageSmall || 'https://via.placeholder.com/375x375.png?text=[+Not+Available+]';
+
+  return (
+    <Card>
+      <Card.Img variant="top" src={cardImgSrc} />
+      <Card.Body>
+        <Card.Title>{title || 'N/A'}</Card.Title>
+        <Card.Text>
+          Object Date: {objectDate || 'N/A'}
+          <br />
+          Classification: {classification || 'N/A'}
+          <br />
+          Medium: {medium || 'N/A'}
+        </Card.Text>
+        <Link href={`/artwork/${objectID}`} passHref>
+          View Details (ID: {objectID})
+        </Link>
+      </Card.Body>
+    </Card>
+  );
+};
+
+export default ArtworkCard;

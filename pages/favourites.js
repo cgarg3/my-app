@@ -1,37 +1,37 @@
-import { useAtom } from "jotai";
-import { favouritesAtom } from "@/store";
-import { Row, Col, Card } from "react-bootstrap";
-import ArtworkCard from "@/components/ArtworkCard";
+import React from 'react';
+import { Row, Col, Card } from 'react-bootstrap';
+import ArtworkCard from '@/components/ArtworkCard';
+import { useAtom } from 'jotai';
+import { favouritesAtom } from '../store';
 
-export default function Favourites() {
-    const [favouritesList] = useAtom(favouritesAtom);
-    
-    if(!favouritesList) return null;
-    
-    if (favouritesList === null || favouritesList.length === 0) {
-        return (
-            <>
-                <Card>
-                    <Card.Body>
-                        <Card.Title>Nothing Here</Card.Title>
-                        <Card.Text>
-                        Try adding some new artwork to the list.
-                        </Card.Text>
-                    </Card.Body>
-                </Card>
-            </>
-        )
-    }
+const Favourites = () => {
+  // Get the favouritesList from the favouritesAtom
+  const [favouritesList] = useAtom(favouritesAtom);
 
-    return (
-        <>
-            <Row className="gy-4">
-                {favouritesList.map((currentObjectID) => (
-                    <Col lg={3} key={currentObjectID}>
-                        <ArtworkCard objectID={currentObjectID} />
-                    </Col>
-                ))}
-            </Row>
-        </>
-    )
-}
+  // If favouritesList is not available yet (still loading from the server), return null
+  if (!favouritesList) return null;
+
+  return (
+    <>
+      <h1>Favourites</h1>
+      {favouritesList.length === 0 ? (
+        <Card>
+          <Card.Body>
+            <h4>Nothing Here</h4>
+            Try adding some new artwork to the list.
+          </Card.Body>
+        </Card>
+      ) : (
+        <Row className="gy-4">
+          {favouritesList.map((currentObjectID) => (
+            <Col lg={3} key={currentObjectID}>
+              <ArtworkCard objectID={currentObjectID} />
+            </Col>
+          ))}
+        </Row>
+      )}
+    </>
+  );
+};
+
+export default Favourites;

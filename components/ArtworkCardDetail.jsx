@@ -1,65 +1,103 @@
-import React from 'react';
+
+import React, { useState } from 'react';
+import { Card, Button } from 'react-bootstrap';
 import useSWR from 'swr';
-import Card from 'react-bootstrap/Card';
+// import { Error } from '../components/Error'; // Import the Error component
 import { useAtom } from 'jotai';
-import { favouritesAtom } from '@/store';
-import { useState, useEffect } from 'react';
-import { Button } from 'react-bootstrap';
-import Error from 'next/error';  
-import { addToFavourites, removeFromFavourites } from '@/lib/userData';
+import { favouritesAtom } from '../store';
+import { addToFavourites, removeFromFavourites } from '../lib/userData'; // Import functions to handle favorites
 
-export default function ArtworkCardDetail({ objectID }) {
-    // Get a reference to the favourites list
-    const [ favourites, setFavourites ] = useAtom(favouritesAtom);
-    // Changes button if the value is in favourites already
-    const [ showAdded, setShowAdded ] = useState(false);
 
-    // Make a call to the museum API using the objectID passed as props to this component
-    // Using conditional fetching: Use null or pass a function as key to conditionally fetch data. If the function throws or returns a falsy value, SWR will not start the request.
-    const { data, error } = useSWR(objectID ? `https://collectionapi.metmuseum.org/public/collection/v1/objects/${objectID}` : null);
+const useFavouritesAtom = () => {
+  return useAtom(favouritesAtom);
+};
 
-    // pdate showAdded 
-    useEffect(()=>{
-        setShowAdded(favourites?.includes(objectID));
-    }, [favourites]);
-    
-
-    // To be invoked when the button is clicked
-    async function favouritesClicked() {
-        // If the "showAdded" value in the state is true, then we must remove this piece of artwork from the favourites list.  
-        if (showAdded) {
-            setFavourites(await removeFromFavourites(objectID));
-        } else {
-            setFavourites(await addToFavourites(objectID));
-        }
+const ArtworkCardDetail = ({ objectID }) => {
+  const fetcher = async (url) => {
+    const res = await fetch(url);
+    if (!res.ok) {
+      const error = new Error('An error occurred while fetching the data.');
+      error.info = await res.json();
+      error.status = res.status;
+      throw error;
     }
+    return res.json();
+  };
 
-    // Throw an error if the API request fails
-    if (error) {
-        return <Error statusCode={404} />;
+  // Get the favouritesList and setFavouritesList from the favouritesAtom
+  const [favouritesList, setFavouritesList] = useFavouritesAtom();
+
+  const { data, error } = useSWR(
+    objectID ? `https://collectionapi.metmuseum.org/public/collection/v1/objects/${objectID}` : null,
+    fetcher
+  );
+
+  if (error) {
+    return null;
+  }
+
+  if (!data) {
+    return null;
+  }
+
+  const { primaryImage, title, objectDate, classification, medium, artistDisplayName, creditLine, dimensions, artistWikidata_URL } = data;
+
+  const cardImgSrc = primaryImage ? primaryImage : 'https://via.placeholder.com/375x375.png?text=[+Not+Available+]';
+
+  // Get a reference to the "showAdded" value in the state
+  const [showAdded, setShowAdded] = useState(favouritesList.includes(objectID));
+
+  // Function to handle the favourites button click
+  const favouritesClicked = async () => {
+    if (showAdded) {
+      // Remove the objectID from the "favouritesList"
+      setFavouritesList((current) => current.filter((fav) => fav !== objectID));
+      // Remove the objectID from the user's favorites on the server
+      await removeFromFavourites(objectID);
     } else {
-        // Validate the data
-        if (!data || data.length === 0) {
-            return null;
-        }
-        else {
-            return (
-                <Card className='hero-card' style={{ width: '18rem' }}>
-                    {data.primaryImageSmall && <Card.Img variant="top" src={data.primaryImage} />}
-                    <Card.Body>
-                        {data.title ? <Card.Title className='card-title'>{data.title}</Card.Title> : <Card.Title>N/A</Card.Title> }
-                        <Card.Text>
-                            {data.objectDate ? <p className='card-date'>{data.objectDate}</p> : <p>N/A</p> }
-                            {data.classification ? <p>{data.classification}</p> : <p>N/A</p> }
-                            {data.medium ? <p>{data.medium}</p> : <p>N/A</p> } <br /><br />
-                            {data.artistDisplayName ? <span><p>{data.artistDisplayName}</p><p><a href={data.artistWikidata_URL} target="_blank" rel="noreferrer">wiki</a></p></span> : <p>N/A</p> }
-                            {data.creditLine ? <p>{data.creditLine}</p> : <p>N/A</p> }
-                            {data.dimensions ? <p>{data.dimensions}</p> : <p>N/A</p> }
-                            {showAdded ? <Button onClick={favouritesClicked} variant='primary'>+ Favourite (added)</Button> : <Button onClick={favouritesClicked} variant='outline-primary'>+ Favourite</Button>}
-                        </Card.Text>
-                    </Card.Body>
-                </Card>
-            );
-        }
+      // Add the objectID to the "favouritesList"
+      setFavouritesList((current) => [...current, objectID]);
+      // Add the objectID to the user's favorites on the server
+      await addToFavourites(objectID);
     }
-}
+    // Toggle the "showAdded" state
+    setShowAdded(!showAdded);
+  };
+
+  return (
+    <Card>
+      {primaryImage && <Card.Img variant="top" src={cardImgSrc} />}
+      <Card.Body>
+        <Card.Title>{title || 'N/A'}</Card.Title>
+        <div>
+          Object Date: {objectDate || 'N/A'}
+          <br />
+          Classification: {classification || 'N/A'}
+          <br />
+          Medium: {medium || 'N/A'}
+          <br />
+          <br />
+          Artist: {artistDisplayName || 'N/A'}
+          {artistDisplayName && (
+            <a href={artistWikidata_URL} target="_blank" rel="noreferrer">
+              wiki
+            </a>
+          )}
+          <br />
+          Credit Line: {creditLine || 'N/A'}
+          <br />
+          Dimensions: {dimensions || 'N/A'}
+        </div>
+
+        {/* Favourites Button */}
+        <Button variant={showAdded ? 'primary' : 'outline-primary'} onClick={favouritesClicked}>
+          {showAdded ? '+ Favourite (added)' : '+ Favourite'}
+        </Button>
+      </Card.Body>
+    </Card>
+  );
+};
+
+export default ArtworkCardDetail;
+
+

@@ -1,55 +1,62 @@
-import { Card, Form, Alert, Button } from 'react-bootstrap';
 import { useState } from 'react';
-import { authenticateUser } from '@/lib/authenticate';
 import { useRouter } from 'next/router';
-import { useAtom } from 'jotai';
-import { favouritesAtom } from "@/store";
-import { searchHistoryAtom } from '@/store';
+import Alert from 'react-bootstrap/Alert';
 import { getFavourites, getHistory } from '@/lib/userData';
+import { authenticateUser } from '../lib/authenticate';
+import { useAtom } from 'jotai';
+import { favouritesAtom, searchHistoryAtom } from '../store';
 
-export default function Login(props) {
-    const [user, setUser] = useState("");
-    const [password, setPassword] = useState("");
-    const [warning, setWarning] = useState('');
-    const router = useRouter();
-    const [favouritesList, setFavouritesList] = useAtom(favouritesAtom);
-    const [searchHistory, setSearchHistory] = useAtom(searchHistoryAtom)
+export default function LoginPage() {
+  const router = useRouter();
+  const [userName, setUserName] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [, setFavouritesList] = useAtom(favouritesAtom);
+  const [, setSearchHistory] = useAtom(searchHistoryAtom);
 
-    async function updateAtoms() {
-      setFavouritesList(await getFavourites()); 
-      setSearchHistory(await getHistory()); 
+  const handleLogin = async (event) => {
+    event.preventDefault();
+    try {
+      const isAuthenticated = await authenticateUser(userName, password);
+      if (isAuthenticated) {
+        await updateAtoms();
+        router.push('/favourites');
+      }
+    } catch (error) {
+      setError(error.message);
     }
+  };
 
-    async function handleSubmit(e) {
-        e.preventDefault();
-        try {
-            await authenticateUser(user, password);
-            await updateAtoms();
-            router.push('/favourites');
-        } catch (err) {
-            setWarning(err.message);
-        }
-    }
+  const updateAtoms = async () => {
+    setFavouritesList(await getFavourites());
+    setSearchHistory(await getHistory());
+  };
 
-    return (
-    <>
-      <Card bg="light">
-        <Card.Body><h2>Login</h2>Enter your login information below:</Card.Body>
-      </Card>
-      <br />
-      <Form onSubmit={handleSubmit}>
-        <Form.Group>
-          <Form.Label>User:</Form.Label><Form.Control type="text" value={user} id="userName" name="userName" onChange={e => setUser(e.target.value)} />
-        </Form.Group>
-        <br />
-        <Form.Group>
-          <Form.Label>Password:</Form.Label><Form.Control type="password" value={password} id="password" name="password" onChange={e => setPassword(e.target.value)} />
-        </Form.Group>
-        <br />
-        <Button variant="primary" className="pull-right" type="submit">Login</Button>
-        <br />
-        { warning && ( <><br /><Alert variant="danger">{warning}</Alert></> )}
-      </Form>
-    </>
+  return (
+    <div>
+      <h1>Login</h1>
+      {error && <Alert variant="danger">{error}</Alert>}
+      <form onSubmit={handleLogin}>
+        <div>
+          <label htmlFor="username">Username:</label>
+          <input
+            type="text"
+            id="username"
+            value={userName}
+            onChange={(e) => setUserName(e.target.value)}
+          />
+        </div>
+        <div>
+          <label htmlFor="password">Password:</label>
+          <input
+            type="password"
+            id="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+        </div>
+        <button type="submit">Login</button>
+      </form>
+    </div>
   );
 }
